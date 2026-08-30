@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { prompt: string; seed: string; tier: number };
+  let body: { prompt: string; seed: string; tier: number; model?: string };
   try {
     body = await req.json();
   } catch {
@@ -26,6 +26,11 @@ export async function POST(req: NextRequest) {
   const timeout = setTimeout(() => controller.abort(), 200_000);
 
   try {
+    const modelId = body.model === "haiku"
+      ? "claude-haiku-4-5-20251001"
+      : "claude-sonnet-4-6";
+    const maxTokens = body.model === "haiku" ? 8000 : 16000;
+
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -35,8 +40,8 @@ export async function POST(req: NextRequest) {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 16000,
+        model: modelId,
+        max_tokens: maxTokens,
         messages: [
           {
             role: "user",

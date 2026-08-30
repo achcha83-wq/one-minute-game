@@ -4,63 +4,60 @@ import { useState, useRef, useEffect, useCallback } from "react";
 
 const TIERS = [
   {
-    minutes: 1,
-    target: 60,
-    label: "1 MIN",
-    sub: "Quick & scrappy",
+    target: 15,
+    label: "15 SEC",
+    sub: "Lightning round",
     color: "#22c55e",
-    prompt: `You are a game developer. Create a FUN, PLAYABLE browser game. Pick ONE random concept from this list — use the random seed to choose unpredictably, do NOT always pick the first: clicker game, reaction speed test, dodge falling objects, whack-a-mole, color matching, balloon popping, catch falling items, memory sequence simon says, shooting gallery, quick math challenge, emoji catcher, color flood fill.
+    model: "haiku",
+    prompt: `You are a game developer. Create a FUN, PLAYABLE browser game. Pick ONE random concept — use the random seed to choose unpredictably, do NOT always pick the first: clicker game, reaction speed test, whack-a-mole, color matching, balloon popping, catch falling items, quick math challenge, emoji catcher.
 
 CRITICAL REQUIREMENTS:
-- Output ONLY the complete HTML. Start with <!DOCTYPE html>. No explanation, no markdown, no backticks before or after the HTML.
+- Output ONLY the complete HTML. Start with <!DOCTYPE html>. No explanation, no markdown, no backticks.
 - Single self-contained HTML file with ALL CSS in <style> and ALL JS in <script>
-- MUST work on mobile touch screens — use touch events (touchstart, touchmove, touchend) alongside mouse events
+- MUST work on mobile — use touch events (touchstart, touchend) alongside mouse events
 - Use viewport meta tag: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-- Make the game fill the entire viewport (100vw x 100vh), no scrolling
-- Use large tap targets (min 48px) for mobile
-- Include a visible score counter
-- Vibrant colors on dark background
+- Fill entire viewport (100vw x 100vh), no scrolling, overflow:hidden on body
+- Large tap targets (min 48px) for mobile
+- Visible score counter
+- Vibrant colors on dark background (#111 or similar)
 - requestAnimationFrame for animation
-- Game over state with large Play Again button
-- Show brief instructions on start screen with a large START button
-- Give the game a creative title in the <title> tag
-- IMPORTANT: The game must be COMPLETE and FULLY FUNCTIONAL. Do not leave any TODO or placeholder code.`,
+- Game over state with Play Again button
+- Start screen with START button
+- Creative title in <title> tag
+- The game must be COMPLETE and FULLY FUNCTIONAL.`,
   },
   {
-    minutes: 2,
-    target: 120,
-    label: "2 MIN",
-    sub: "More depth",
+    target: 30,
+    label: "30 SEC",
+    sub: "Quick & fun",
     color: "#f97316",
-    prompt: `You are a skilled game developer. Create a POLISHED, ENGAGING browser game. Pick ONE random concept — use the random seed to choose unpredictably, do NOT always pick the first: snake with power-ups, breakout brick breaker, memory card matching, space invaders, platformer, maze runner, tetris-inspired, bubble shooter, tower stacker, asteroid shooter, pong with twists, flappy bird style, connect-the-dots puzzle, color sorting.
+    model: "sonnet",
+    prompt: `You are a game developer. Create a FUN, PLAYABLE browser game. Pick ONE random concept — use the random seed to choose unpredictably, do NOT always pick the first: snake, breakout brick breaker, memory card matching, space invaders, bubble shooter, tower stacker, asteroid shooter, pong with twists, dodge falling objects, shooting gallery, color flood fill, simon says memory.
 
 CRITICAL REQUIREMENTS:
-- Output ONLY the complete HTML. Start with <!DOCTYPE html>. No explanation, no markdown, no backticks before or after.
+- Output ONLY the complete HTML. Start with <!DOCTYPE html>. No explanation, no markdown, no backticks.
 - Single self-contained HTML file with ALL CSS in <style> and ALL JS in <script>
-- MUST work on mobile — use BOTH touch events AND mouse/keyboard. For mobile: add on-screen virtual buttons/joystick or use tap/swipe gestures
+- MUST work on mobile — use BOTH touch events AND mouse/keyboard. Add on-screen tap/swipe controls for mobile
 - Use viewport meta tag: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 - Fill entire viewport (100vw x 100vh), prevent scrolling with overflow:hidden on body
-- Scoring system with best score tracking in memory
-- Increasing difficulty or levels
-- Vibrant colors, gradients, smooth animations on dark background
+- Scoring system with best score tracking in a variable
+- Vibrant colors, smooth animations on dark background
 - Use Canvas API for rendering
 - Start screen with title + instructions + big START button. Game over screen with score + PLAY AGAIN button.
 - requestAnimationFrame for 60fps
-- Sound effects using Web Audio API oscillators (no external files)
-- Visual feedback on key events (flash, shake)
 - Give the game a creative title in the <title> tag
 - IMPORTANT: The game must be COMPLETE and FULLY FUNCTIONAL. Every feature must work.`,
   },
   {
-    minutes: 3,
-    target: 180,
-    label: "3 MIN",
+    target: 60,
+    label: "1 MIN",
     sub: "Go all out",
     color: "#a855f7",
-    prompt: `You are an expert game developer. Create an IMPRESSIVE, POLISHED browser game. Pick ONE random concept — use the random seed to choose unpredictably: roguelike dungeon crawler, tower defense, RPG battle arena, physics puzzle, survival waves, top-down racing, bullet hell shooter, deck builder card game, procedural adventure, rhythm action game, puzzle platformer, match-3 with twists.
+    model: "sonnet",
+    prompt: `You are an expert game developer. Create an IMPRESSIVE, POLISHED browser game. Pick ONE random concept — use the random seed to choose unpredictably: roguelike dungeon crawler, tower defense, RPG battle arena, physics puzzle, survival waves, bullet hell shooter, platformer, maze runner, tetris-inspired, rhythm action game, puzzle platformer, match-3 with twists.
 
 CRITICAL REQUIREMENTS:
-- Output ONLY the complete HTML. Start with <!DOCTYPE html>. No explanation, no markdown, no backticks before or after.
+- Output ONLY the complete HTML. Start with <!DOCTYPE html>. No explanation, no markdown, no backticks.
 - Single self-contained HTML file with ALL CSS in <style> and ALL JS in <script>
 - MUST work on mobile — use BOTH touch AND mouse/keyboard. Add on-screen virtual controls (d-pad, action buttons) for mobile
 - Use viewport meta tag: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -81,9 +78,9 @@ CRITICAL REQUIREMENTS:
 ];
 
 const MESSAGES = [
+  ["Spinning up...", "Almost there..."],
   ["Rolling the dice...", "Wiring up the fun...", "Applying pixel dust...", "Almost ready..."],
-  ["Brainstorming chaos...", "Sculpting levels...", "Adding juice...", "Tuning difficulty...", "Polishing pixels...", "Nearly done..."],
-  ["Imagining worlds...", "Spawning enemies...", "Building arenas...", "Adding particles...", "Composing sounds...", "Balancing gameplay...", "Stress testing fun...", "Final polish..."],
+  ["Imagining worlds...", "Spawning enemies...", "Building arenas...", "Adding particles...", "Composing sounds...", "Final polish..."],
 ];
 
 type AppState = "idle" | "generating" | "holding" | "ready" | "error";
@@ -162,7 +159,7 @@ export default function Page() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: ctrl.signal,
-        body: JSON.stringify({ prompt: tier.prompt, seed, tier: idx + 1 }),
+        body: JSON.stringify({ prompt: tier.prompt, seed, tier: idx + 1, model: tier.model }),
       });
 
       const data = await res.json();
@@ -222,7 +219,9 @@ export default function Page() {
     window.open(`/game/${gameId}`, "_blank");
   };
 
-  const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+  const fmt = (s: number) => s >= 60
+    ? `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`
+    : `0:${s.toString().padStart(2, "0")}`;
   const tc = tierIdx !== null ? TIERS[tierIdx].color : "#e4e4f0";
   const target = tierIdx !== null ? TIERS[tierIdx].target : 60;
   const progress = Math.min(elapsed / target, 1);
@@ -245,7 +244,7 @@ export default function Page() {
             padding: "8px 18px", borderRadius: 8, fontSize: 13, cursor: "pointer",
           }}>Exit</button>
         </div>
-        <iframe srcDoc={gameHtml} sandbox="allow-scripts" title={gameName}
+        <iframe srcDoc={gameHtml} sandbox="allow-scripts allow-same-origin" title={gameName}
           style={{ flex: 1, width: "100%", border: "none", background: "#000" }} />
       </div>
     );
@@ -385,7 +384,7 @@ export default function Page() {
                 padding: "10px 16px", borderRadius: 10, fontSize: 13,
                 cursor: "pointer", fontWeight: 600, backdropFilter: "blur(4px)",
               }}>⛶ Fullscreen</button>
-              <iframe srcDoc={gameHtml} sandbox="allow-scripts" title={gameName}
+              <iframe srcDoc={gameHtml} sandbox="allow-scripts allow-same-origin" title={gameName}
                 style={{ width: "100%", height: "100%", border: "none" }} />
             </div>
 

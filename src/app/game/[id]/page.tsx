@@ -90,7 +90,7 @@ function GameViewer({ name, html, tier }: { name: string; html: string; tier: nu
       </div>
       <iframe
         srcDoc={html}
-        sandbox="allow-scripts"
+        sandbox="allow-scripts allow-same-origin"
         title={name}
         style={{ flex: 1, width: "100%", border: "none", background: "#000" }}
       />
