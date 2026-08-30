@@ -3,8 +3,12 @@ import { nanoid } from "nanoid";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { TIER_CONFIGS } from "@/lib/tier-config";
 import { injectMobileFixes, extractTitle, cleanHtml } from "@/lib/game-helpers";
+import { logEvent } from "@/lib/logger";
+
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  const t0 = Date.now();
   let body: { tier: number };
   try {
     body = await req.json();
@@ -20,7 +24,6 @@ export async function POST(req: NextRequest) {
   const config = TIER_CONFIGS[tierIdx];
   const supabase = getSupabaseAdmin();
 
-  // Check current pool size for this tier
   try {
     const { count } = await supabase
       .from("game_pool")
@@ -31,11 +34,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "pool full", count });
     }
   } catch {
-    // Pool table might not exist — try to generate anyway, insert will fail gracefully
+    // Pool table might not exist — try to generate anyway
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
+    await logEvent("replenish_error", config.tier, { error: "ANTHROPIC_API_KEY not configured" });
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY not configured" },
       { status: 500 },
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest) {
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 200_000);
+  const timeout = setTimeout(() => controller.abort(), 55_000);
 
   try {
     const seed =
@@ -73,6 +77,11 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       const errText = await res.text();
+      await logEvent("replenish_api_error", config.tier, {
+        status: res.status,
+        detail: errText.slice(0, 500),
+        latencyMs: Date.now() - t0,
+      });
       return NextResponse.json(
         { error: `Claude API error: ${res.status}`, detail: errText },
         { status: 502 },
@@ -98,26 +107,41 @@ export async function POST(req: NextRequest) {
       });
 
       if (dbError) {
+        await logEvent("replenish_db_error", config.tier, {
+          error: dbError.message,
+          latencyMs: Date.now() - t0,
+        });
         return NextResponse.json(
           { error: `Failed to save to pool: ${dbError.message}` },
           { status: 500 },
         );
       }
 
+      await logEvent("replenish_success", config.tier, {
+        name,
+        latencyMs: Date.now() - t0,
+      });
       return NextResponse.json({ status: "replenished", name, tier: config.tier });
     }
 
+    await logEvent("replenish_empty", config.tier, { latencyMs: Date.now() - t0 });
     return NextResponse.json(
       { error: data.error?.message || "Empty response from AI" },
       { status: 502 },
     );
   } catch (err) {
+    const latencyMs = Date.now() - t0;
     if (err instanceof Error && err.name === "AbortError") {
+      await logEvent("replenish_timeout", config.tier, { latencyMs });
       return NextResponse.json(
         { error: "Request timed out" },
         { status: 504 },
       );
     }
+    await logEvent("replenish_error", config.tier, {
+      error: err instanceof Error ? err.message : "Unknown",
+      latencyMs,
+    });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },

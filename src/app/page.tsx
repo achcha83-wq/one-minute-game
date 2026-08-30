@@ -63,6 +63,14 @@ export default function Page() {
     if (abortRef.current) abortRef.current.abort();
   }, []);
 
+  const logError = (event: string, detail?: Record<string, unknown>) => {
+    fetch("/api/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event, ...detail }),
+    }).catch(() => {});
+  };
+
   const replenish = (tier: number) => {
     fetch("/api/replenish", {
       method: "POST",
@@ -120,6 +128,7 @@ export default function Page() {
         timerRef.current = null;
         if (abortRef.current) abortRef.current.abort();
         setElapsed(s);
+        logError("client_timeout", { tier: idx + 1, elapsedSec: s, targetSec: target });
         setErrMsg("AI couldn't finish in time — try again or pick a longer tier");
         setState("error");
       }
@@ -175,7 +184,9 @@ export default function Page() {
         return;
       }
       if (timerRef.current) clearInterval(timerRef.current);
-      setErrMsg(err instanceof Error ? err.message : "Something went wrong");
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      logError("client_error", { tier: idx + 1, error: msg, elapsedSec: Math.floor((Date.now() - startT.current) / 1000) });
+      setErrMsg(msg);
       setState("error");
     }
   }, []);
@@ -235,6 +246,11 @@ export default function Page() {
     );
   }
 
+  const leaderboard = recentGames
+    .filter((g) => (g.high_score ?? 0) > 0)
+    .sort((a, b) => (b.high_score ?? 0) - (a.high_score ?? 0))
+    .slice(0, 20);
+
   return (
     <div style={{
       minHeight: "100dvh", background: "#0b0b1a", color: "#e4e4f0",
@@ -242,7 +258,7 @@ export default function Page() {
       display: "flex", flexDirection: "column", alignItems: "center",
       padding: "20px 16px", WebkitTapHighlightColor: "transparent",
     }}>
-      <div style={{ width: "100%", maxWidth: 420, overflow: "visible" }}>
+      <div style={{ width: "100%", maxWidth: 720, overflow: "visible" }}>
 
         {/* IDLE */}
         {state === "idle" && <>
@@ -260,38 +276,83 @@ export default function Page() {
             </p>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, overflow: "visible" }}>
-            {TIERS.map((t, i) => {
-              const tierGames = recentGames.filter((g) => g.tier === i + 1);
-              return (
-                <div key={i} style={{ overflow: "visible" }}>
-                  <button onClick={() => generate(i)} style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "20px 22px", background: "#151530", border: "1px solid #2a2a4a",
-                    borderRadius: 16, cursor: "pointer", color: "#e4e4f0",
-                    WebkitTapHighlightColor: "transparent", outline: "none", width: "100%",
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                      <div style={{
-                        width: 46, height: 46, borderRadius: 12,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 18, fontWeight: 800, color: "#0b0b1a",
-                        background: t.color, flexShrink: 0, fontFamily: "monospace",
-                      }}>{i + 1}</div>
-                      <div style={{ textAlign: "left" }}>
-                        <div style={{ fontSize: 17, fontWeight: 600 }}>{t.label}</div>
-                        <div style={{ fontSize: 13, color: "#6b6b8d", marginTop: 2 }}>{t.sub}</div>
+          <div className="idle-layout" style={{
+            display: "flex", gap: 24, alignItems: "flex-start",
+          }}>
+            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 12, overflow: "visible" }}>
+              {TIERS.map((t, i) => {
+                const tierGames = recentGames.filter((g) => g.tier === i + 1);
+                return (
+                  <div key={i} style={{ overflow: "visible" }}>
+                    <button onClick={() => generate(i)} style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "20px 22px", background: "#151530", border: "1px solid #2a2a4a",
+                      borderRadius: 16, cursor: "pointer", color: "#e4e4f0",
+                      WebkitTapHighlightColor: "transparent", outline: "none", width: "100%",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                        <div style={{
+                          width: 46, height: 46, borderRadius: 12,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 18, fontWeight: 800, color: "#0b0b1a",
+                          background: t.color, flexShrink: 0, fontFamily: "monospace",
+                        }}>{i + 1}</div>
+                        <div style={{ textAlign: "left" }}>
+                          <div style={{ fontSize: 17, fontWeight: 600 }}>{t.label}</div>
+                          <div style={{ fontSize: 13, color: "#6b6b8d", marginTop: 2 }}>{t.sub}</div>
+                        </div>
                       </div>
-                    </div>
-                    <span style={{ fontSize: 20, color: "#6b6b8d" }}>→</span>
-                  </button>
+                      <span style={{ fontSize: 20, color: "#6b6b8d" }}>→</span>
+                    </button>
 
-                  {tierGames.length > 0 && (
-                    <GameThumbnailRow games={tierGames} color={t.color} />
-                  )}
-                </div>
-              );
-            })}
+                    {tierGames.length > 0 && (
+                      <GameThumbnailRow games={tierGames} color={t.color} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {leaderboard.length > 0 && (
+              <div className="leaderboard" style={{
+                width: 200, flexShrink: 0,
+                background: "#151530", borderRadius: 14,
+                border: "1px solid #2a2a4a", padding: "14px 12px",
+                maxHeight: 400, overflowY: "auto",
+              }}>
+                <div style={{
+                  fontSize: 10, letterSpacing: 3, textTransform: "uppercase",
+                  color: "#6b6b8d", marginBottom: 10, fontFamily: "monospace",
+                  textAlign: "center",
+                }}>Leaderboard</div>
+                {leaderboard.map((g, i) => (
+                  <a key={g.id} href={`/game/${g.id}`} style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "7px 6px", borderRadius: 8, textDecoration: "none",
+                    color: "#e4e4f0", background: i === 0 ? "#1a1a3a" : "transparent",
+                  }}>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, color: i < 3
+                        ? ["#fbbf24", "#94a3b8", "#cd7f32"][i]
+                        : "#4a4a6a",
+                      width: 18, textAlign: "right", flexShrink: 0,
+                      fontFamily: "monospace",
+                    }}>{i + 1}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: 11, fontWeight: 500,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>{g.name}</div>
+                    </div>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, fontFamily: "monospace",
+                      color: TIERS[(g.tier || 1) - 1]?.color || "#6b6b8d",
+                      flexShrink: 0,
+                    }}>{g.high_score}</span>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{ marginTop: 32, textAlign: "center", fontSize: 11, color: "#3a3a5a" }}>
@@ -303,7 +364,7 @@ export default function Page() {
         {(state === "generating" || state === "holding") && (
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center",
-            paddingTop: 60, textAlign: "center",
+            paddingTop: 60, textAlign: "center", maxWidth: 420, margin: "0 auto",
           }}>
             <div style={{ position: "relative", width: 180, height: 180, marginBottom: 20 }}>
               <svg width="180" height="180" viewBox="0 0 180 180"
@@ -356,7 +417,8 @@ export default function Page() {
         {/* READY */}
         {state === "ready" && (
           <div style={{
-            display: "flex", flexDirection: "column", alignItems: "center", width: "100%",
+            display: "flex", flexDirection: "column", alignItems: "center",
+            width: "100%", maxWidth: 420, margin: "0 auto",
           }}>
             <div style={{
               fontSize: 20, fontWeight: 700, marginTop: 8, marginBottom: 4, textAlign: "center",
@@ -404,7 +466,7 @@ export default function Page() {
         {state === "error" && (
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center",
-            paddingTop: 60, textAlign: "center",
+            paddingTop: 60, textAlign: "center", maxWidth: 420, margin: "0 auto",
           }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>⚡</div>
             <h2 style={{ margin: "0 0 8px 0", fontSize: 18, fontWeight: 700 }}>
@@ -429,6 +491,11 @@ export default function Page() {
           50% { opacity: 1; transform: scale(1.2); }
         }
         .thumb-scroll::-webkit-scrollbar { display: none; }
+        .leaderboard::-webkit-scrollbar { display: none; }
+        @media (max-width: 600px) {
+          .idle-layout { flex-direction: column !important; }
+          .leaderboard { width: 100% !important; max-height: 250px !important; }
+        }
       `}</style>
     </div>
   );

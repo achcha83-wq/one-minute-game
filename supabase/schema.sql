@@ -40,3 +40,20 @@ create policy "Pool insertable by service role"
 
 create policy "Pool deletable by service role"
   on game_pool for delete using (true);
+
+-- Event logs for debugging failures
+create table if not exists logs (
+  id bigint generated always as identity primary key,
+  event text not null,
+  tier smallint,
+  detail jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table logs enable row level security;
+
+create policy "Logs insertable by service role"
+  on logs for insert with check (true);
+
+create policy "Logs readable by service role"
+  on logs for select using (true);
