@@ -457,7 +457,7 @@ export default function Page() {
                 padding: "16px 20px", borderRadius: 14, border: "1px solid #2a2a4a",
                 background: "#151530", fontSize: 15, fontWeight: 600,
                 cursor: "pointer", color: "#6b6b8d",
-              }}>+</button>
+              }}>🚪</button>
             </div>
           </div>
         )}
