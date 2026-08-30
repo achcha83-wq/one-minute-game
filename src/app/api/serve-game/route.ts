@@ -46,14 +46,12 @@ export async function POST(req: NextRequest) {
         const id = nanoid(10);
         const html = injectMobileFixes(poolGame.html);
 
-        await supabase.from("games").insert({
-          id,
-          name: poolGame.name,
-          html,
-          tier: config.tier,
-          play_count: 1,
-          created_at: new Date().toISOString(),
-        });
+        const row = { id, name: poolGame.name, html, tier: config.tier, play_count: 1, created_at: new Date().toISOString() };
+        const { error: insErr } = await supabase.from("games").insert(row);
+        if (insErr) {
+          const { play_count: _, ...rowNoPC } = row;
+          await supabase.from("games").insert(rowNoPC);
+        }
 
         await logEvent("pool_hit", config.tier, {
           gameId: id,
@@ -121,6 +119,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: config.modelId,
         max_tokens: config.maxTokens,
+        stream: true,
         messages: [
           {
             role: "user",
@@ -143,24 +142,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const data = await res.json();
+    let raw = "";
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let done = false;
 
-    if (data.content && data.content.length > 0) {
-      let raw = data.content
-        .map((c: { text?: string }) => c.text || "")
-        .join("");
+    while (!done) {
+      const { value, done: streamDone } = await reader.read();
+      done = streamDone;
+      if (value) {
+        const chunk = decoder.decode(value, { stream: true });
+        for (const line of chunk.split("\n")) {
+          if (line.startsWith("data: ") && !line.includes("[DONE]")) {
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.type === "content_block_delta" && event.delta?.text) {
+                raw += event.delta.text;
+              }
+            } catch { /* skip non-JSON lines */ }
+          }
+        }
+      }
+    }
+
+    if (raw.length > 0) {
       const html = injectMobileFixes(cleanHtml(raw));
       const name = extractTitle(html);
       const id = nanoid(10);
 
-      await supabase.from("games").insert({
-        id,
-        name,
-        html,
-        tier: config.tier,
-        play_count: 1,
-        created_at: new Date().toISOString(),
-      });
+      const row2 = { id, name, html, tier: config.tier, play_count: 1, created_at: new Date().toISOString() };
+      const { error: insErr2 } = await supabase.from("games").insert(row2);
+      if (insErr2) {
+        const { play_count: _, ...rowNoPC2 } = row2;
+        await supabase.from("games").insert(rowNoPC2);
+      }
 
       await logEvent("live_generation", config.tier, {
         gameId: id,
@@ -172,11 +187,11 @@ export async function POST(req: NextRequest) {
     }
 
     await logEvent("empty_response", config.tier, {
-      error: data.error?.message || "Empty response",
+      error: "Empty streamed response",
       latencyMs: Date.now() - t0,
     });
     return NextResponse.json(
-      { error: data.error?.message || "Empty response from AI" },
+      { error: "Empty response from AI" },
       { status: 502 },
     );
   } catch (err) {

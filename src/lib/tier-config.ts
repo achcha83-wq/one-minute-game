@@ -9,7 +9,7 @@ export const TIER_CONFIGS = [
 Pick ONE game at random — you MUST use the seed below to choose. Different seeds MUST produce different games. Options: reaction timer, whack-a-mole grid, tap speed test, color match quiz, math blitz, emoji memory pairs, number sort race, pattern repeat, odd one out, reflex test, shape tapper, rapid fire trivia, falling word catch, target tap.
 
 EXACT STRUCTURE REQUIRED:
-1. A start screen: title + big START button
+1. A start screen: title + 1-2 lines explaining HOW TO PLAY (e.g. "Tap the emoji before they disappear!") + big START button
 2. Gameplay: game elements appear as <div>s inside a container, player taps them
 3. Game over: final score + PLAY AGAIN button
 
@@ -67,7 +67,8 @@ RENDERING:
 - All game objects must stay within canvas bounds (0 to canvas.width, 0 to canvas.height)
 
 GAME FLOW:
-- Start screen → gameplay → game over with score + PLAY AGAIN
+- Start screen with title + brief HOW TO PLAY instructions (1-2 lines explaining controls) + START button
+- Gameplay → game over with score + PLAY AGAIN
 - Clear all intervals/timeouts on game over
 - Whenever score changes: if(window._reportScore) window._reportScore(score);
 
@@ -77,43 +78,24 @@ STYLE: dark background, vibrant colors, smooth animations.`,
     tier: 3,
     model: "sonnet" as const,
     modelId: "claude-sonnet-4-6",
-    maxTokens: 10000,
-    prompt: `You are an expert game developer. Create an IMPRESSIVE, POLISHED mobile browser game.
+    maxTokens: 5000,
+    prompt: `Create a polished mobile browser game. Single HTML file, canvas-based, touch-only (NO keyboard).
 
-Pick ONE game at random — you MUST use the seed below to choose, and different seeds MUST produce completely different games. Options: roguelike dungeon crawler, tower defense, RPG battle arena, physics puzzle, survival wave shooter, bullet hell, platformer, maze runner, tetris variant, rhythm game, match-3, space combat, zombie defense, castle builder, card battler, dungeon puzzle, racing dodge, particle shooter, gravity flipper, arena brawler.
+Pick ONE at random using the seed below. Different seeds = different games. Options: tower defense, wave shooter, platformer, match-3, space combat, maze runner, breakout variant, asteroid dodge, card battler, arena brawler.
 
-OUTPUT FORMAT:
-- Output ONLY complete HTML starting with <!DOCTYPE html>. No markdown, no backticks.
-- Single file: ALL CSS in <style>, ALL JS in <script>
+RULES:
+- Output ONLY <!DOCTYPE html>. No markdown, no backticks.
 - <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-- Creative <title> tag
-
-MOBILE CONTROLS — CRITICAL:
-- PHONE ONLY. NO keyboard, NO arrow keys, NO WASD, NO mouse hover.
-- Buttons (START, PAUSE, PLAY AGAIN): addEventListener('click'), min 200px wide
-- Touch-based game controls with visible on-screen UI:
-  * LEFT SIDE: virtual joystick or D-pad for movement — draw it on canvas, track touch drag
-  * RIGHT SIDE: action buttons (attack/jump/shoot) as large circles (60px+)
-  * touchstart/touchmove/touchend with {passive:false} + e.preventDefault()
-  * Multi-touch: track touches by identifier for simultaneous move+action
-- Get touch coords: var rect=canvas.getBoundingClientRect(); var x=touch.clientX-rect.left; var y=touch.clientY-rect.top;
-
-RENDERING:
-- Canvas API: var canvas=document.getElementById('c'); var ctx=canvas.getContext('2d');
-- canvas.width=window.innerWidth; canvas.height=window.innerHeight; — update on resize
-- requestAnimationFrame 60fps game loop
-- All objects within canvas bounds
-- HUD at TOP CENTER (score, health, level) — away from thumb controls
-- Particle effects, glow effects (ctx.shadowBlur), vibrant palette on dark background
-
-GAME DEPTH:
-- Multiple states: menu, playing, paused, game over
-- Multiple enemy types with different behaviors
-- Power-ups or upgrades between waves/levels
-- Progressive difficulty
-- Web Audio API: var ac=new AudioContext(); — play sounds via oscillator on events
+- <title> with game name
+- Canvas: var canvas=document.getElementById('c'); var ctx=canvas.getContext('2d');
+- canvas.width=window.innerWidth; canvas.height=window.innerHeight; resize on window resize
+- requestAnimationFrame game loop
+- Touch: canvas.addEventListener('touchstart',fn,{passive:false}); e.preventDefault(); var rect=canvas.getBoundingClientRect(); var x=e.touches[0].clientX-rect.left;
+- On-screen controls: virtual joystick or tap-to-act, 60px+ touch targets
+- States: menu (title + brief HOW TO PLAY instructions + START button) → playing → game over (score + PLAY AGAIN)
+- Multiple enemy types, progressive difficulty, power-ups
+- HUD at top center (score, health). Dark background, vibrant colors, glow effects.
 - Whenever score changes: if(window._reportScore) window._reportScore(score);
-
-Make it IMPRESSIVE — this is the premium tier.`,
+- Keep code CONCISE — no comments, short variable names, no unnecessary whitespace.`,
   },
 ];

@@ -12,11 +12,19 @@ async function getGame(id: string) {
   const supabase = getSupabase();
   if (!supabase) return null;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("games")
     .select("id, name, html, tier, play_count, created_at")
     .eq("id", id)
     .single();
+  if (error || !data) {
+    const fallback = await supabase
+      .from("games")
+      .select("id, name, html, tier, created_at")
+      .eq("id", id)
+      .single();
+    return fallback.data as typeof data;
+  }
   return data;
 }
 
@@ -71,7 +79,7 @@ export default async function GamePage({
       .from("games")
       .update({ play_count: (game.play_count || 0) + 1 })
       .eq("id", id)
-      .then(() => {});
+      .then(() => {}, () => {});
   }
 
   return <GameViewer name={game.name} html={game.html} tier={game.tier} />;
