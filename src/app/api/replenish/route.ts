@@ -55,6 +55,27 @@ export async function POST(req: NextRequest) {
       "-" +
       Date.now().toString(36);
 
+    let avoidList = "";
+    try {
+      const { data: recent } = await supabase
+        .from("games")
+        .select("name")
+        .eq("tier", config.tier)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      const { data: pooled } = await supabase
+        .from("game_pool")
+        .select("name")
+        .eq("tier", config.tier);
+      const names = [
+        ...(recent || []).map((g) => g.name),
+        ...(pooled || []).map((g) => g.name),
+      ];
+      if (names.length > 0) {
+        avoidList = `\nDo NOT make any of these games (already exist): ${names.join(", ")}. Pick something COMPLETELY DIFFERENT.\n`;
+      }
+    } catch { /* ignore */ }
+
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -69,7 +90,7 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: "user",
-            content: `Random seed (use this to make your choice unpredictable): ${seed}\n\n${config.prompt}`,
+            content: `Random seed (use this to make your choice unpredictable): ${seed}${avoidList}\n\n${config.prompt}`,
           },
         ],
       }),

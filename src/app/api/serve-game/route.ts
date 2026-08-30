@@ -95,6 +95,20 @@ export async function POST(req: NextRequest) {
       "-" +
       Date.now().toString(36);
 
+    // Fetch recent games to avoid repeats
+    let avoidList = "";
+    try {
+      const { data: recent } = await supabase
+        .from("games")
+        .select("name")
+        .eq("tier", config.tier)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (recent && recent.length > 0) {
+        avoidList = `\nDo NOT make any of these games (already played): ${recent.map((g) => g.name).join(", ")}. Pick something COMPLETELY DIFFERENT.\n`;
+      }
+    } catch { /* ignore */ }
+
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -109,7 +123,7 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: "user",
-            content: `Random seed (use this to make your choice unpredictable): ${seed}\n\n${config.prompt}`,
+            content: `Random seed (use this to make your choice unpredictable): ${seed}${avoidList}\n\n${config.prompt}`,
           },
         ],
       }),
