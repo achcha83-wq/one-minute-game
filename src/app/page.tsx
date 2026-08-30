@@ -4,29 +4,23 @@ import { useState, useRef, useEffect, useCallback } from "react";
 
 const TIERS = [
   {
-    target: 20,
-    label: "20 SEC",
+    target: 15,
+    label: "15 SEC",
     sub: "Lightning round",
     color: "#22c55e",
     model: "haiku",
-    prompt: `You are a game developer. Create a FUN, PLAYABLE browser game. Pick ONE random concept — use the random seed to choose unpredictably, do NOT always pick the first: clicker game, reaction speed test, whack-a-mole, color matching, balloon popping, catch falling items, quick math challenge, emoji catcher.
+    maxTokens: 4000,
+    prompt: `Create a simple, fun mobile browser game. Pick ONE at random using the seed: tap speed test, whack-a-mole, balloon pop, color match, emoji catch, math blitz.
 
-CRITICAL REQUIREMENTS:
-- Output ONLY the complete HTML. Start with <!DOCTYPE html>. No explanation, no markdown, no backticks.
-- Single self-contained HTML file with ALL CSS in <style> and ALL JS in <script>
-- THIS GAME WILL BE PLAYED ON A MOBILE PHONE. There is NO keyboard, NO arrow keys, NO mouse hover.
-- ALL controls MUST be touch-based: tap, swipe, drag, or on-screen buttons. Never require keyboard input.
-- Use touch events (touchstart, touchmove, touchend) with { passive: false } and preventDefault() to stop scrolling
-- Use viewport meta tag: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-- Fill entire viewport (100vw x 100vh), no scrolling, overflow:hidden on body
-- Large tap targets (min 48px) for mobile fingers
-- Visible score counter
-- Vibrant colors on dark background (#111 or similar)
-- requestAnimationFrame for animation
-- Game over state with Play Again button
-- Start screen with big START button
-- Creative title in <title> tag
-- The game must be COMPLETE and FULLY FUNCTIONAL.`,
+Rules:
+- Output ONLY complete HTML starting with <!DOCTYPE html>. No markdown.
+- Single file: CSS in <style>, JS in <script>
+- MOBILE ONLY: touch events (touchstart/touchend), NO keyboard. Big tap targets (48px+).
+- Viewport: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+- Full screen (100vw x 100vh), overflow:hidden, dark background
+- Score counter, Start button, Game Over with Play Again
+- requestAnimationFrame, vibrant colors, <title> tag
+- Must be COMPLETE and playable.`,
   },
   {
     target: 30,
@@ -34,24 +28,21 @@ CRITICAL REQUIREMENTS:
     sub: "Quick & fun",
     color: "#f97316",
     model: "sonnet",
-    prompt: `You are a game developer. Create a FUN, PLAYABLE browser game. Pick ONE random concept — use the random seed to choose unpredictably, do NOT always pick the first: snake, breakout brick breaker, memory card matching, space invaders, bubble shooter, tower stacker, asteroid shooter, pong with twists, dodge falling objects, shooting gallery, color flood fill, simon says memory.
+    maxTokens: 8000,
+    prompt: `You are a game developer. Create a FUN, PLAYABLE browser game. Pick ONE random concept using the seed: snake, breakout, memory cards, space invaders, bubble shooter, tower stacker, dodge falling objects, shooting gallery, simon says.
 
 CRITICAL REQUIREMENTS:
-- Output ONLY the complete HTML. Start with <!DOCTYPE html>. No explanation, no markdown, no backticks.
-- Single self-contained HTML file with ALL CSS in <style> and ALL JS in <script>
-- THIS GAME WILL BE PLAYED ON A MOBILE PHONE. There is NO keyboard, NO arrow keys, NO mouse hover.
-- ALL controls MUST be touch-based: tap to shoot/select, swipe to move, drag to aim, or on-screen D-pad/buttons. NEVER require keyboard input.
-- Use touch events (touchstart, touchmove, touchend) with { passive: false } and preventDefault() to stop page scrolling
-- For movement games: add a visible on-screen joystick or D-pad using touch drag
-- Use viewport meta tag: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-- Fill entire viewport (100vw x 100vh), prevent scrolling with overflow:hidden on body
-- Scoring system with best score tracking in a variable
-- Vibrant colors, smooth animations on dark background
-- Use Canvas API for rendering
-- Start screen with title + instructions + big START button. Game over screen with score + PLAY AGAIN button.
-- requestAnimationFrame for 60fps
-- Give the game a creative title in the <title> tag
-- IMPORTANT: The game must be COMPLETE and FULLY FUNCTIONAL. Every feature must work.`,
+- Output ONLY complete HTML starting with <!DOCTYPE html>. No markdown, no backticks.
+- Single file: ALL CSS in <style>, ALL JS in <script>
+- MOBILE PHONE ONLY — NO keyboard, NO arrow keys, NO mouse hover exist.
+- ALL controls: tap to shoot/select, swipe to move, drag to aim, or on-screen D-pad. Use touchstart/touchmove/touchend with {passive:false} + preventDefault().
+- For movement games: visible on-screen joystick or D-pad via touch drag
+- Viewport: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+- Full viewport (100vw x 100vh), overflow:hidden, dark background
+- Canvas API rendering, requestAnimationFrame for 60fps
+- Scoring system, Start screen + Game Over with Play Again
+- Vibrant colors, smooth animations, creative <title>
+- Must be COMPLETE and FULLY FUNCTIONAL.`,
   },
   {
     target: 60,
@@ -59,32 +50,27 @@ CRITICAL REQUIREMENTS:
     sub: "Go all out",
     color: "#a855f7",
     model: "sonnet",
-    prompt: `You are an expert game developer. Create an IMPRESSIVE, POLISHED browser game. Pick ONE random concept — use the random seed to choose unpredictably: roguelike dungeon crawler, tower defense, RPG battle arena, physics puzzle, survival waves, bullet hell shooter, platformer, maze runner, tetris-inspired, rhythm action game, puzzle platformer, match-3 with twists.
+    maxTokens: 16000,
+    prompt: `You are an expert game developer. Create an IMPRESSIVE, POLISHED browser game. Pick ONE random concept using the seed: roguelike dungeon crawler, tower defense, RPG battle, physics puzzle, survival waves, bullet hell, platformer, maze runner, tetris-style, rhythm game, match-3.
 
 CRITICAL REQUIREMENTS:
-- Output ONLY the complete HTML. Start with <!DOCTYPE html>. No explanation, no markdown, no backticks.
-- Single self-contained HTML file with ALL CSS in <style> and ALL JS in <script>
-- THIS GAME WILL BE PLAYED ON A MOBILE PHONE. There is NO keyboard, NO arrow keys, NO mouse hover.
-- ALL controls MUST be 100% touch-based. Implement visible on-screen virtual controls:
-  * D-pad or virtual joystick (rendered on canvas) for movement — tracks finger drag via touchmove
-  * Action buttons (attack, jump, shoot) as large tappable circles on the right side
-  * Use touch events (touchstart, touchmove, touchend) with { passive: false } and preventDefault()
-  * Support multi-touch so player can move AND act simultaneously
-  * NEVER rely on keyboard, arrow keys, WASD, or mouse — they don't exist on phones
-- Use viewport meta tag: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-- Fill entire viewport (100vw x 100vh), prevent all scrolling
-- Canvas API for all rendering
+- Output ONLY complete HTML starting with <!DOCTYPE html>. No markdown, no backticks.
+- Single file: ALL CSS in <style>, ALL JS in <script>
+- MOBILE PHONE ONLY — NO keyboard, NO arrow keys, NO WASD, NO mouse hover.
+- 100% touch controls with visible on-screen virtual controls:
+  * D-pad or virtual joystick on canvas for movement (touchmove drag)
+  * Action buttons (attack/jump/shoot) as large tappable circles on right side
+  * touchstart/touchmove/touchend with {passive:false} + preventDefault()
+  * Multi-touch support (move AND act simultaneously)
+- Viewport: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+- Full viewport (100vw x 100vh), overflow:hidden
+- Canvas API rendering, requestAnimationFrame 60fps
 - Complex scoring, upgrades or progression
-- Multiple game states: menu, playing, paused, game over
-- HUD with score/level/health — positioned at the TOP CENTER, away from virtual controls
-- Multiple enemy types with different behaviors
-- requestAnimationFrame at 60fps
-- Sound effects via Web Audio API oscillators (create AudioContext on first user touch)
-- Particle effects for explosions/impacts
-- Power-ups or special abilities
-- Vibrant palette on dark background, glow effects
-- Give the game a creative title in the <title> tag
-- IMPORTANT: The game must be COMPLETE and FULLY FUNCTIONAL. Do not cut corners or leave stubs.`,
+- Multiple states: menu, playing, paused, game over
+- HUD at TOP CENTER (away from controls), multiple enemy types
+- Web Audio API oscillators (AudioContext on first touch), particle effects
+- Power-ups, vibrant palette on dark background, glow effects, creative <title>
+- Must be COMPLETE and FULLY FUNCTIONAL.`,
   },
 ];
 
@@ -189,7 +175,7 @@ export default function Page() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: ctrl.signal,
-        body: JSON.stringify({ prompt: tier.prompt, seed, tier: idx + 1, model: tier.model }),
+        body: JSON.stringify({ prompt: tier.prompt, seed, tier: idx + 1, model: tier.model, maxTokens: tier.maxTokens }),
       });
 
       const data = await res.json();
@@ -481,83 +467,108 @@ export default function Page() {
           0%, 100% { opacity: 0.2; transform: scale(0.8); }
           50% { opacity: 1; transform: scale(1.2); }
         }
+        .thumb-scroll::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
   );
 }
 
+const THUMB_SIZE = 140;
+const IFRAME_SIZE = 375;
+const SCALE = THUMB_SIZE / IFRAME_SIZE;
+
 function GameThumbnailRow({ games, color }: { games: SavedGame[]; color: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [showArrow, setShowArrow] = useState(false);
-  const cols = 4;
-  const maxVisible = cols * 2;
-  const hasMore = games.length > maxVisible;
+  const [canScroll, setCanScroll] = useState(false);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    setShowArrow(el.scrollWidth > el.clientWidth);
+    const check = () => setCanScroll(el.scrollWidth > el.clientWidth + 4);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, [games]);
 
   const scroll = () => {
-    scrollRef.current?.scrollBy({ left: 200, behavior: "smooth" });
+    scrollRef.current?.scrollBy({ left: THUMB_SIZE + 8, behavior: "smooth" });
   };
 
   return (
-    <div style={{ position: "relative", marginTop: 8, marginBottom: 4 }}>
+    <div style={{ position: "relative", marginTop: 10, marginBottom: 6 }}>
       <div
         ref={scrollRef}
+        className="thumb-scroll"
         style={{
           display: "grid",
-          gridTemplateRows: "repeat(2, 1fr)",
+          gridTemplateRows: `repeat(2, ${THUMB_SIZE}px)`,
           gridAutoFlow: "column",
-          gridAutoColumns: "72px",
-          gap: 6,
+          gridAutoColumns: `${THUMB_SIZE}px`,
+          gap: 8,
           overflowX: "auto",
           overflowY: "hidden",
-          paddingBottom: 4,
           scrollbarWidth: "none",
-          msOverflowStyle: "none",
+          paddingRight: canScroll ? 32 : 0,
         }}
       >
-        {games.slice(0, hasMore ? undefined : maxVisible).map((g) => (
+        {games.map((g) => (
           <a
             key={g.id}
             href={`/game/${g.id}`}
             style={{
-              width: 72, height: 40, borderRadius: 8,
-              background: "#1a1a36", border: `1px solid ${color}33`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              textDecoration: "none", overflow: "hidden", padding: "0 4px",
+              display: "block",
+              width: THUMB_SIZE,
+              height: THUMB_SIZE,
+              borderRadius: 12,
+              overflow: "hidden",
+              border: `1px solid ${color}44`,
+              background: "#000",
+              position: "relative",
+              textDecoration: "none",
             }}
           >
-            <span style={{
-              fontSize: 10, color: "#999", textAlign: "center",
-              lineHeight: 1.2, overflow: "hidden",
-              display: "-webkit-box", WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical" as const,
-              wordBreak: "break-word" as const,
-            }}>{g.name}</span>
+            <iframe
+              src={`/api/games/${g.id}`}
+              loading="lazy"
+              sandbox="allow-scripts allow-same-origin"
+              title={g.name}
+              style={{
+                width: IFRAME_SIZE,
+                height: IFRAME_SIZE,
+                border: "none",
+                transform: `scale(${SCALE})`,
+                transformOrigin: "top left",
+                pointerEvents: "none",
+              }}
+            />
+            <div style={{
+              position: "absolute", bottom: 0, left: 0, right: 0,
+              background: "linear-gradient(transparent, rgba(0,0,0,0.85))",
+              padding: "16px 8px 6px",
+            }}>
+              <div style={{
+                fontSize: 10, color: "#ddd", fontWeight: 600,
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>{g.name}</div>
+            </div>
           </a>
         ))}
       </div>
 
-      {(hasMore || showArrow) && (
+      {canScroll && (
         <button
           onClick={scroll}
           style={{
-            position: "absolute", right: -4, top: "50%", transform: "translateY(-50%)",
-            width: 28, height: 28, borderRadius: "50%",
-            background: "rgba(11,11,26,0.9)", border: `1px solid ${color}66`,
-            color, fontSize: 14, cursor: "pointer",
+            position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)",
+            width: 30, height: 30, borderRadius: "50%",
+            background: "rgba(11,11,26,0.95)", border: `1px solid ${color}88`,
+            color, fontSize: 15, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 2,
           }}
         >→</button>
       )}
-
-      <style>{`
-        div::-webkit-scrollbar { display: none; }
-      `}</style>
     </div>
   );
 }
