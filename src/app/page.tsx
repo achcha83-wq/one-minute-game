@@ -101,7 +101,7 @@ export default function Page() {
 
     timerRef.current = setInterval(() => {
       const s = Math.floor((Date.now() - startT.current) / 1000);
-      setElapsed(s);
+      setElapsed(Math.min(s, target));
 
       const iv = Math.max(Math.floor(target / msgs.length), 4);
       const ni = Math.min(Math.floor(s / iv), msgs.length - 1);

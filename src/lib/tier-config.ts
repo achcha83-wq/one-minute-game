@@ -3,7 +3,7 @@ export const TIER_CONFIGS = [
     tier: 1,
     model: "haiku" as const,
     modelId: "claude-haiku-4-5-20251001",
-    maxTokens: 4000,
+    maxTokens: 2500,
     prompt: `Create a simple, fun mobile browser game using DOM elements (NOT canvas).
 
 Pick ONE game at random — you MUST use the seed below to choose. Different seeds MUST produce different games. Options: reaction timer, whack-a-mole grid, tap speed test, color match quiz, math blitz, emoji memory pairs, number sort race, pattern repeat, odd one out, reflex test, shape tapper, rapid fire trivia, falling word catch, target tap.
