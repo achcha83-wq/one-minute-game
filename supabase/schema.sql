@@ -3,6 +3,8 @@ create table if not exists games (
   name text not null,
   html text not null,
   tier smallint not null default 1,
+  high_score integer not null default 0,
+  play_count integer not null default 0,
   created_at timestamptz not null default now()
 );
 
@@ -15,3 +17,44 @@ create policy "Games are publicly readable"
 create policy "Games are insertable by service role"
   on games for insert
   with check (true);
+
+create policy "Games are updatable by service role"
+  on games for update
+  using (true);
+
+-- Pre-generated game pool: games waiting to be served
+create table if not exists game_pool (
+  id text primary key,
+  name text not null,
+  html text not null,
+  tier smallint not null,
+  created_at timestamptz not null default now()
+);
+
+alter table game_pool enable row level security;
+
+create policy "Pool readable by service role"
+  on game_pool for select using (true);
+
+create policy "Pool insertable by service role"
+  on game_pool for insert with check (true);
+
+create policy "Pool deletable by service role"
+  on game_pool for delete using (true);
+
+-- Event logs for debugging failures
+create table if not exists logs (
+  id bigint generated always as identity primary key,
+  event text not null,
+  tier smallint,
+  detail jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table logs enable row level security;
+
+create policy "Logs insertable by service role"
+  on logs for insert with check (true);
+
+create policy "Logs readable by service role"
+  on logs for select using (true);

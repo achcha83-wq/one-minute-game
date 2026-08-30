@@ -1,15 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 
-async function getGame(id: string) {
+function getSupabase() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
+  return createClient(url, key);
+}
 
-  const supabase = createClient(url, key);
+async function getGame(id: string) {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+
   const { data } = await supabase
     .from("games")
-    .select("id, name, html, tier, created_at")
+    .select("id, name, html, tier, play_count, created_at")
     .eq("id", id)
     .single();
   return data;
@@ -57,6 +62,16 @@ export default async function GamePage({
         }}>Make Your Own</a>
       </div>
     );
+  }
+
+  // Increment play count (fire and forget)
+  const supabase = getSupabase();
+  if (supabase) {
+    supabase
+      .from("games")
+      .update({ play_count: (game.play_count || 0) + 1 })
+      .eq("id", id)
+      .then(() => {});
   }
 
   return <GameViewer name={game.name} html={game.html} tier={game.tier} />;
