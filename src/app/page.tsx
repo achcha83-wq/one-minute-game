@@ -4,8 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 
 const TIERS = [
   {
-    target: 15,
-    label: "15 SEC",
+    target: 20,
+    label: "20 SEC",
     sub: "Lightning round",
     color: "#22c55e",
     model: "haiku",
@@ -14,15 +14,17 @@ const TIERS = [
 CRITICAL REQUIREMENTS:
 - Output ONLY the complete HTML. Start with <!DOCTYPE html>. No explanation, no markdown, no backticks.
 - Single self-contained HTML file with ALL CSS in <style> and ALL JS in <script>
-- MUST work on mobile — use touch events (touchstart, touchend) alongside mouse events
+- THIS GAME WILL BE PLAYED ON A MOBILE PHONE. There is NO keyboard, NO arrow keys, NO mouse hover.
+- ALL controls MUST be touch-based: tap, swipe, drag, or on-screen buttons. Never require keyboard input.
+- Use touch events (touchstart, touchmove, touchend) with { passive: false } and preventDefault() to stop scrolling
 - Use viewport meta tag: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 - Fill entire viewport (100vw x 100vh), no scrolling, overflow:hidden on body
-- Large tap targets (min 48px) for mobile
+- Large tap targets (min 48px) for mobile fingers
 - Visible score counter
 - Vibrant colors on dark background (#111 or similar)
 - requestAnimationFrame for animation
 - Game over state with Play Again button
-- Start screen with START button
+- Start screen with big START button
 - Creative title in <title> tag
 - The game must be COMPLETE and FULLY FUNCTIONAL.`,
   },
@@ -37,7 +39,10 @@ CRITICAL REQUIREMENTS:
 CRITICAL REQUIREMENTS:
 - Output ONLY the complete HTML. Start with <!DOCTYPE html>. No explanation, no markdown, no backticks.
 - Single self-contained HTML file with ALL CSS in <style> and ALL JS in <script>
-- MUST work on mobile — use BOTH touch events AND mouse/keyboard. Add on-screen tap/swipe controls for mobile
+- THIS GAME WILL BE PLAYED ON A MOBILE PHONE. There is NO keyboard, NO arrow keys, NO mouse hover.
+- ALL controls MUST be touch-based: tap to shoot/select, swipe to move, drag to aim, or on-screen D-pad/buttons. NEVER require keyboard input.
+- Use touch events (touchstart, touchmove, touchend) with { passive: false } and preventDefault() to stop page scrolling
+- For movement games: add a visible on-screen joystick or D-pad using touch drag
 - Use viewport meta tag: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 - Fill entire viewport (100vw x 100vh), prevent scrolling with overflow:hidden on body
 - Scoring system with best score tracking in a variable
@@ -59,16 +64,22 @@ CRITICAL REQUIREMENTS:
 CRITICAL REQUIREMENTS:
 - Output ONLY the complete HTML. Start with <!DOCTYPE html>. No explanation, no markdown, no backticks.
 - Single self-contained HTML file with ALL CSS in <style> and ALL JS in <script>
-- MUST work on mobile — use BOTH touch AND mouse/keyboard. Add on-screen virtual controls (d-pad, action buttons) for mobile
+- THIS GAME WILL BE PLAYED ON A MOBILE PHONE. There is NO keyboard, NO arrow keys, NO mouse hover.
+- ALL controls MUST be 100% touch-based. Implement visible on-screen virtual controls:
+  * D-pad or virtual joystick (rendered on canvas) for movement — tracks finger drag via touchmove
+  * Action buttons (attack, jump, shoot) as large tappable circles on the right side
+  * Use touch events (touchstart, touchmove, touchend) with { passive: false } and preventDefault()
+  * Support multi-touch so player can move AND act simultaneously
+  * NEVER rely on keyboard, arrow keys, WASD, or mouse — they don't exist on phones
 - Use viewport meta tag: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 - Fill entire viewport (100vw x 100vh), prevent all scrolling
 - Canvas API for all rendering
 - Complex scoring, upgrades or progression
 - Multiple game states: menu, playing, paused, game over
-- HUD with score/level/health
+- HUD with score/level/health — positioned at the TOP CENTER, away from virtual controls
 - Multiple enemy types with different behaviors
 - requestAnimationFrame at 60fps
-- Sound effects via Web Audio API oscillators
+- Sound effects via Web Audio API oscillators (create AudioContext on first user touch)
 - Particle effects for explosions/impacts
 - Power-ups or special abilities
 - Vibrant palette on dark background, glow effects
@@ -85,6 +96,8 @@ const MESSAGES = [
 
 type AppState = "idle" | "generating" | "holding" | "ready" | "error";
 
+type SavedGame = { id: string; name: string; tier: number; created_at: string };
+
 export default function Page() {
   const [state, setState] = useState<AppState>("idle");
   const [tierIdx, setTierIdx] = useState<number | null>(null);
@@ -96,12 +109,20 @@ export default function Page() {
   const [errMsg, setErrMsg] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [recentGames, setRecentGames] = useState<SavedGame[]>([]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const msgIdx = useRef(0);
   const startT = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const buffered = useRef<{ html: string; name: string; id: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/games")
+      .then((r) => r.json())
+      .then((d) => { if (d.games) setRecentGames(d.games); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -139,14 +160,23 @@ export default function Page() {
         setLoadMsg(msgs[ni]);
       }
 
-      if (s >= target && buffered.current) {
-        clearInterval(timerRef.current!);
-        timerRef.current = null;
-        setGameHtml(buffered.current.html);
-        setGameName(buffered.current.name);
-        setGameId(buffered.current.id);
-        setElapsed(target);
-        setState("ready");
+      if (s >= target) {
+        if (buffered.current) {
+          clearInterval(timerRef.current!);
+          timerRef.current = null;
+          setGameHtml(buffered.current.html);
+          setGameName(buffered.current.name);
+          setGameId(buffered.current.id);
+          setElapsed(target);
+          setState("ready");
+        } else {
+          clearInterval(timerRef.current!);
+          timerRef.current = null;
+          if (abortRef.current) abortRef.current.abort();
+          setElapsed(target);
+          setErrMsg("AI couldn't finish in time — try again or pick a longer tier");
+          setState("error");
+        }
       }
     }, 250);
 
@@ -179,13 +209,22 @@ export default function Page() {
           buffered.current = { html: data.html, name: data.name || "Mystery Game", id: data.id };
           setState("holding");
         }
+
+        setRecentGames((prev) => {
+          const newGame: SavedGame = {
+            id: data.id,
+            name: data.name || "Mystery Game",
+            tier: idx + 1,
+            created_at: new Date().toISOString(),
+          };
+          return [newGame, ...prev.filter((g) => g.id !== data.id)].slice(0, 30);
+        });
       } else {
         throw new Error(data.error || "Empty response");
       }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         if (timerRef.current) clearInterval(timerRef.current);
-        setState("idle");
         return;
       }
       if (timerRef.current) clearInterval(timerRef.current);
@@ -206,13 +245,13 @@ export default function Page() {
       try {
         await navigator.share({ title: gameName, text: `Play "${gameName}" — built by AI`, url });
         return;
-      } catch { /* user cancelled, fall through to clipboard */ }
+      } catch { /* user cancelled */ }
     }
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch { /* clipboard failed silently */ }
+    } catch { /* clipboard failed */ }
   };
 
   const playFullPage = () => {
@@ -226,7 +265,6 @@ export default function Page() {
   const target = tierIdx !== null ? TIERS[tierIdx].target : 60;
   const progress = Math.min(elapsed / target, 1);
 
-  // Fullscreen game view
   if (fullscreen && state === "ready") {
     return (
       <div style={{
@@ -276,28 +314,37 @@ export default function Page() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {TIERS.map((t, i) => (
-              <button key={i} onClick={() => generate(i)} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "20px 22px", background: "#151530", border: "1px solid #2a2a4a",
-                borderRadius: 16, cursor: "pointer", color: "#e4e4f0",
-                WebkitTapHighlightColor: "transparent", outline: "none",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  <div style={{
-                    width: 46, height: 46, borderRadius: 12,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 18, fontWeight: 800, color: "#0b0b1a",
-                    background: t.color, flexShrink: 0, fontFamily: "monospace",
-                  }}>{i + 1}</div>
-                  <div style={{ textAlign: "left" }}>
-                    <div style={{ fontSize: 17, fontWeight: 600 }}>{t.label}</div>
-                    <div style={{ fontSize: 13, color: "#6b6b8d", marginTop: 2 }}>{t.sub}</div>
-                  </div>
+            {TIERS.map((t, i) => {
+              const tierGames = recentGames.filter((g) => g.tier === i + 1);
+              return (
+                <div key={i}>
+                  <button onClick={() => generate(i)} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "20px 22px", background: "#151530", border: "1px solid #2a2a4a",
+                    borderRadius: 16, cursor: "pointer", color: "#e4e4f0",
+                    WebkitTapHighlightColor: "transparent", outline: "none", width: "100%",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                      <div style={{
+                        width: 46, height: 46, borderRadius: 12,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 18, fontWeight: 800, color: "#0b0b1a",
+                        background: t.color, flexShrink: 0, fontFamily: "monospace",
+                      }}>{i + 1}</div>
+                      <div style={{ textAlign: "left" }}>
+                        <div style={{ fontSize: 17, fontWeight: 600 }}>{t.label}</div>
+                        <div style={{ fontSize: 13, color: "#6b6b8d", marginTop: 2 }}>{t.sub}</div>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 20, color: "#6b6b8d" }}>→</span>
+                  </button>
+
+                  {tierGames.length > 0 && (
+                    <GameThumbnailRow games={tierGames} color={t.color} />
+                  )}
                 </div>
-                <span style={{ fontSize: 20, color: "#6b6b8d" }}>→</span>
-              </button>
-            ))}
+              );
+            })}
           </div>
 
           <div style={{ marginTop: 32, textAlign: "center", fontSize: 11, color: "#3a3a5a" }}>
@@ -311,7 +358,6 @@ export default function Page() {
             display: "flex", flexDirection: "column", alignItems: "center",
             paddingTop: 60, textAlign: "center",
           }}>
-            {/* Circular progress ring */}
             <div style={{ position: "relative", width: 180, height: 180, marginBottom: 20 }}>
               <svg width="180" height="180" viewBox="0 0 180 180"
                 style={{ transform: "rotate(-90deg)" }}>
@@ -376,19 +422,17 @@ export default function Page() {
             <div style={{
               width: "100%", height: "60dvh", borderRadius: 14, overflow: "hidden",
               border: "1px solid #2a2a4a", background: "#000", marginBottom: 14,
-              position: "relative",
             }}>
-              <button onClick={() => setFullscreen(true)} style={{
-                position: "absolute", top: 8, right: 8, zIndex: 10,
-                background: "rgba(0,0,0,0.8)", border: "1px solid #555", color: "#fff",
-                padding: "10px 16px", borderRadius: 10, fontSize: 13,
-                cursor: "pointer", fontWeight: 600, backdropFilter: "blur(4px)",
-              }}>⛶ Fullscreen</button>
               <iframe srcDoc={gameHtml} sandbox="allow-scripts allow-same-origin" title={gameName}
                 style={{ width: "100%", height: "100%", border: "none" }} />
             </div>
 
             <div style={{ display: "flex", gap: 10, width: "100%" }}>
+              <button onClick={() => setFullscreen(true)} style={{
+                padding: "16px 20px", borderRadius: 14, border: "1px solid #2a2a4a",
+                background: "#151530", fontSize: 15, fontWeight: 600,
+                cursor: "pointer", color: "#e4e4f0",
+              }}>⛶</button>
               <button onClick={playFullPage} style={{
                 flex: 1, padding: 16, borderRadius: 14, border: "none",
                 fontSize: 15, fontWeight: 600, cursor: "pointer",
@@ -437,6 +481,82 @@ export default function Page() {
           0%, 100% { opacity: 0.2; transform: scale(0.8); }
           50% { opacity: 1; transform: scale(1.2); }
         }
+      `}</style>
+    </div>
+  );
+}
+
+function GameThumbnailRow({ games, color }: { games: SavedGame[]; color: string }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showArrow, setShowArrow] = useState(false);
+  const cols = 4;
+  const maxVisible = cols * 2;
+  const hasMore = games.length > maxVisible;
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setShowArrow(el.scrollWidth > el.clientWidth);
+  }, [games]);
+
+  const scroll = () => {
+    scrollRef.current?.scrollBy({ left: 200, behavior: "smooth" });
+  };
+
+  return (
+    <div style={{ position: "relative", marginTop: 8, marginBottom: 4 }}>
+      <div
+        ref={scrollRef}
+        style={{
+          display: "grid",
+          gridTemplateRows: "repeat(2, 1fr)",
+          gridAutoFlow: "column",
+          gridAutoColumns: "72px",
+          gap: 6,
+          overflowX: "auto",
+          overflowY: "hidden",
+          paddingBottom: 4,
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
+      >
+        {games.slice(0, hasMore ? undefined : maxVisible).map((g) => (
+          <a
+            key={g.id}
+            href={`/game/${g.id}`}
+            style={{
+              width: 72, height: 40, borderRadius: 8,
+              background: "#1a1a36", border: `1px solid ${color}33`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              textDecoration: "none", overflow: "hidden", padding: "0 4px",
+            }}
+          >
+            <span style={{
+              fontSize: 10, color: "#999", textAlign: "center",
+              lineHeight: 1.2, overflow: "hidden",
+              display: "-webkit-box", WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical" as const,
+              wordBreak: "break-word" as const,
+            }}>{g.name}</span>
+          </a>
+        ))}
+      </div>
+
+      {(hasMore || showArrow) && (
+        <button
+          onClick={scroll}
+          style={{
+            position: "absolute", right: -4, top: "50%", transform: "translateY(-50%)",
+            width: 28, height: 28, borderRadius: "50%",
+            background: "rgba(11,11,26,0.9)", border: `1px solid ${color}66`,
+            color, fontSize: 14, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >→</button>
+      )}
+
+      <style>{`
+        div::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
   );
