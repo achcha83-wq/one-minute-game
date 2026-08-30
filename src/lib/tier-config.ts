@@ -78,7 +78,7 @@ STYLE: dark background, vibrant colors, smooth animations.`,
     tier: 3,
     model: "sonnet" as const,
     modelId: "claude-sonnet-4-6",
-    maxTokens: 5000,
+    maxTokens: 3000,
     prompt: `Create a polished mobile browser game. Single HTML file, canvas-based, touch-only (NO keyboard).
 
 Pick ONE at random using the seed below. Different seeds = different games. Options: tower defense, wave shooter, platformer, match-3, space combat, maze runner, breakout variant, asteroid dodge, card battler, arena brawler.
@@ -96,6 +96,6 @@ RULES:
 - Multiple enemy types, progressive difficulty, power-ups
 - HUD at top center (score, health). Dark background, vibrant colors, glow effects.
 - Whenever score changes: if(window._reportScore) window._reportScore(score);
-- Keep code CONCISE — no comments, short variable names, no unnecessary whitespace.`,
+- CRITICAL: Keep code VERY CONCISE. Use short variable names (1-2 chars). No comments. Minify where possible. This MUST be under 3000 tokens total.`,
   },
 ];
