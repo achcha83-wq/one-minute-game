@@ -53,7 +53,6 @@ OUTPUT FORMAT:
 
 MOBILE CONTROLS — CRITICAL:
 - This runs on a PHONE. NO keyboard, NO arrow keys, NO mouse hover.
-- Buttons (START, PLAY AGAIN): use addEventListener('click'), min 200px wide, 60px tall
 - Game controls: tap to shoot/select, drag/swipe to move
 - Touch events: canvas.addEventListener('touchstart', fn, {passive:false}) — call e.preventDefault()
 - Get touch position: var rect=canvas.getBoundingClientRect(); var x=e.touches[0].clientX-rect.left; var y=e.touches[0].clientY-rect.top;
@@ -66,9 +65,15 @@ RENDERING:
 - requestAnimationFrame game loop at 60fps
 - All game objects must stay within canvas bounds (0 to canvas.width, 0 to canvas.height)
 
-GAME FLOW:
-- Start screen with title + brief HOW TO PLAY instructions (1-2 lines explaining controls) + START button
-- Gameplay → game over with score + PLAY AGAIN
+SCREEN MANAGEMENT — THIS IS CRITICAL (canvas MUST NOT block HTML buttons):
+- Create 3 HTML divs: startScreen, gameScreen (contains canvas), gameOverScreen
+- startScreen: title + HOW TO PLAY text + big START button (addEventListener('click'), min 200px wide, 60px tall)
+- gameOverScreen: score + PLAY AGAIN button (addEventListener('click'), min 200px wide, 60px tall)
+- The CANVAS must be INSIDE gameScreen div, NOT a sibling of the buttons
+- On load: show startScreen, HIDE gameScreen and gameOverScreen (display='none')
+- On START click: hide startScreen, show gameScreen (display='block'), start game loop
+- On game over: hide gameScreen, show gameOverScreen
+- On PLAY AGAIN: hide gameOverScreen, show gameScreen, restart
 - Clear all intervals/timeouts on game over
 - Whenever score changes: if(window._reportScore) window._reportScore(score);
 
@@ -91,7 +96,6 @@ OUTPUT FORMAT:
 
 MOBILE CONTROLS — CRITICAL:
 - PHONE ONLY. NO keyboard, NO arrow keys, NO WASD, NO mouse hover.
-- Buttons (START, PLAY AGAIN): addEventListener('click'), min 200px wide, 60px tall
 - Touch-based game controls with visible on-screen UI:
   * For movement: virtual joystick OR drag-to-move via touchmove — draw visible controls on canvas
   * For actions: tap on canvas to shoot/interact
@@ -106,10 +110,15 @@ RENDERING:
 - HUD at TOP CENTER (score, health, level) — away from thumb controls
 - Particle effects, glow effects (ctx.shadowBlur), vibrant palette on dark background
 
-GAME FLOW:
-- Start screen: game title + 1-2 lines HOW TO PLAY (e.g. "Drag to move, tap to shoot") + big START button
-- Gameplay with score tracking
-- Game over screen: final score + PLAY AGAIN button
+SCREEN MANAGEMENT — THIS IS CRITICAL (canvas MUST NOT block HTML buttons):
+- Create 3 HTML divs: startScreen, gameScreen (contains canvas), gameOverScreen
+- startScreen: game title + 1-2 lines HOW TO PLAY (e.g. "Drag to move, tap to shoot") + big START button (addEventListener('click'), min 200px wide, 60px tall)
+- gameOverScreen: final score + PLAY AGAIN button (addEventListener('click'), min 200px wide, 60px tall)
+- The CANVAS must be INSIDE gameScreen div, NOT a sibling of the buttons
+- On load: show startScreen, HIDE gameScreen and gameOverScreen (display='none')
+- On START click: hide startScreen, show gameScreen (display='block'), start game loop
+- On game over: hide gameScreen, show gameOverScreen
+- On PLAY AGAIN: hide gameOverScreen, show gameScreen, restart
 - Clear all intervals/timeouts on game over
 - Multiple enemy types with different behaviors
 - Progressive difficulty (enemies get faster/more numerous)
