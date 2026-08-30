@@ -6,7 +6,7 @@ export async function GET() {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("games")
-      .select("id, name, tier, created_at")
+      .select("id, name, tier, high_score, created_at")
       .order("created_at", { ascending: false })
       .limit(30);
 

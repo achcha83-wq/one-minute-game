@@ -3,75 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
 const TIERS = [
-  {
-    target: 15,
-    label: "15 SEC",
-    sub: "Lightning round",
-    color: "#22c55e",
-    model: "haiku",
-    maxTokens: 4000,
-    prompt: `Create a simple, fun mobile browser game. Pick ONE at random using the seed: tap speed test, whack-a-mole, balloon pop, color match, emoji catch, math blitz.
-
-Rules:
-- Output ONLY complete HTML starting with <!DOCTYPE html>. No markdown.
-- Single file: CSS in <style>, JS in <script>
-- MOBILE ONLY: touch events (touchstart/touchend), NO keyboard. Big tap targets (48px+).
-- Viewport: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-- Full screen (100vw x 100vh), overflow:hidden, dark background
-- Score counter, Start button, Game Over with Play Again
-- requestAnimationFrame, vibrant colors, <title> tag
-- Must be COMPLETE and playable.`,
-  },
-  {
-    target: 30,
-    label: "30 SEC",
-    sub: "Quick & fun",
-    color: "#f97316",
-    model: "sonnet",
-    maxTokens: 8000,
-    prompt: `You are a game developer. Create a FUN, PLAYABLE browser game. Pick ONE random concept using the seed: snake, breakout, memory cards, space invaders, bubble shooter, tower stacker, dodge falling objects, shooting gallery, simon says.
-
-CRITICAL REQUIREMENTS:
-- Output ONLY complete HTML starting with <!DOCTYPE html>. No markdown, no backticks.
-- Single file: ALL CSS in <style>, ALL JS in <script>
-- MOBILE PHONE ONLY — NO keyboard, NO arrow keys, NO mouse hover exist.
-- ALL controls: tap to shoot/select, swipe to move, drag to aim, or on-screen D-pad. Use touchstart/touchmove/touchend with {passive:false} + preventDefault().
-- For movement games: visible on-screen joystick or D-pad via touch drag
-- Viewport: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-- Full viewport (100vw x 100vh), overflow:hidden, dark background
-- Canvas API rendering, requestAnimationFrame for 60fps
-- Scoring system, Start screen + Game Over with Play Again
-- Vibrant colors, smooth animations, creative <title>
-- Must be COMPLETE and FULLY FUNCTIONAL.`,
-  },
-  {
-    target: 60,
-    label: "1 MIN",
-    sub: "Go all out",
-    color: "#a855f7",
-    model: "sonnet",
-    maxTokens: 16000,
-    prompt: `You are an expert game developer. Create an IMPRESSIVE, POLISHED browser game. Pick ONE random concept using the seed: roguelike dungeon crawler, tower defense, RPG battle, physics puzzle, survival waves, bullet hell, platformer, maze runner, tetris-style, rhythm game, match-3.
-
-CRITICAL REQUIREMENTS:
-- Output ONLY complete HTML starting with <!DOCTYPE html>. No markdown, no backticks.
-- Single file: ALL CSS in <style>, ALL JS in <script>
-- MOBILE PHONE ONLY — NO keyboard, NO arrow keys, NO WASD, NO mouse hover.
-- 100% touch controls with visible on-screen virtual controls:
-  * D-pad or virtual joystick on canvas for movement (touchmove drag)
-  * Action buttons (attack/jump/shoot) as large tappable circles on right side
-  * touchstart/touchmove/touchend with {passive:false} + preventDefault()
-  * Multi-touch support (move AND act simultaneously)
-- Viewport: <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-- Full viewport (100vw x 100vh), overflow:hidden
-- Canvas API rendering, requestAnimationFrame 60fps
-- Complex scoring, upgrades or progression
-- Multiple states: menu, playing, paused, game over
-- HUD at TOP CENTER (away from controls), multiple enemy types
-- Web Audio API oscillators (AudioContext on first touch), particle effects
-- Power-ups, vibrant palette on dark background, glow effects, creative <title>
-- Must be COMPLETE and FULLY FUNCTIONAL.`,
-  },
+  { target: 15, label: "15 SEC", sub: "Lightning round", color: "#22c55e" },
+  { target: 30, label: "30 SEC", sub: "Quick & fun", color: "#f97316" },
+  { target: 60, label: "1 MIN", sub: "Go all out", color: "#a855f7" },
 ];
 
 const MESSAGES = [
@@ -82,7 +16,7 @@ const MESSAGES = [
 
 type AppState = "idle" | "generating" | "holding" | "ready" | "error";
 
-type SavedGame = { id: string; name: string; tier: number; created_at: string };
+type SavedGame = { id: string; name: string; tier: number; high_score?: number; created_at: string };
 
 export default function Page() {
   const [state, setState] = useState<AppState>("idle");
@@ -110,10 +44,32 @@ export default function Page() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === "game-score" && typeof e.data.score === "number" && gameId) {
+        fetch("/api/score", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gameId, score: e.data.score }),
+        }).catch(() => {});
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [gameId]);
+
   useEffect(() => () => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (abortRef.current) abortRef.current.abort();
   }, []);
+
+  const replenish = (tier: number) => {
+    fetch("/api/replenish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tier }),
+    }).catch(() => {});
+  };
 
   const generate = useCallback(async (idx: number) => {
     const tier = TIERS[idx];
@@ -173,12 +129,11 @@ export default function Page() {
     abortRef.current = ctrl;
 
     try {
-      const seed = Math.random().toString(36).slice(2, 10) + "-" + Date.now().toString(36);
-      const res = await fetch("/api/generate-game", {
+      const res = await fetch("/api/serve-game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: ctrl.signal,
-        body: JSON.stringify({ prompt: tier.prompt, seed, tier: idx + 1, model: tier.model, maxTokens: tier.maxTokens }),
+        body: JSON.stringify({ tier: idx + 1 }),
       });
 
       const data = await res.json();
@@ -208,6 +163,9 @@ export default function Page() {
           };
           return [newGame, ...prev.filter((g) => g.id !== data.id)].slice(0, 30);
         });
+
+        // Replenish the pool for this tier
+        replenish(idx + 1);
       } else {
         throw new Error(data.error || "Empty response");
       }
@@ -284,7 +242,7 @@ export default function Page() {
       display: "flex", flexDirection: "column", alignItems: "center",
       padding: "20px 16px", WebkitTapHighlightColor: "transparent",
     }}>
-      <div style={{ width: "100%", maxWidth: 420 }}>
+      <div style={{ width: "100%", maxWidth: 420, overflow: "visible" }}>
 
         {/* IDLE */}
         {state === "idle" && <>
@@ -558,6 +516,12 @@ function GameThumbnailRow({ games, color }: { games: SavedGame[]; color: string 
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 textAlign: "center",
               }}>{g.name}</div>
+              {(g.high_score ?? 0) > 0 && (
+                <div style={{
+                  fontSize: 7, color, fontWeight: 700,
+                  textAlign: "center", marginTop: 1,
+                }}>HI: {g.high_score}</div>
+              )}
             </div>
           </a>
         ))}
