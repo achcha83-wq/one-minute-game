@@ -146,13 +146,16 @@ export async function POST(req: NextRequest) {
     const reader = res.body!.getReader();
     const decoder = new TextDecoder();
     let done = false;
+    let buf = "";
 
     while (!done) {
       const { value, done: streamDone } = await reader.read();
       done = streamDone;
       if (value) {
-        const chunk = decoder.decode(value, { stream: true });
-        for (const line of chunk.split("\n")) {
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() || "";
+        for (const line of lines) {
           if (line.startsWith("data: ") && !line.includes("[DONE]")) {
             try {
               const event = JSON.parse(line.slice(6));
@@ -163,6 +166,14 @@ export async function POST(req: NextRequest) {
           }
         }
       }
+    }
+    if (buf.startsWith("data: ") && !buf.includes("[DONE]")) {
+      try {
+        const event = JSON.parse(buf.slice(6));
+        if (event.type === "content_block_delta" && event.delta?.text) {
+          raw += event.delta.text;
+        }
+      } catch { /* skip */ }
     }
 
     if (raw.length > 0) {
