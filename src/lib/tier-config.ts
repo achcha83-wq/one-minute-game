@@ -6,7 +6,7 @@ export const TIER_CONFIGS = [
     maxTokens: 2500,
     prompt: `Create a simple, fun mobile browser game using DOM elements (NOT canvas).
 
-Pick ONE game at random — you MUST use the seed below to choose. Different seeds MUST produce different games. Options: reaction timer, whack-a-mole grid, tap speed test, color match quiz, math blitz, emoji memory pairs, number sort race, pattern repeat, odd one out, reflex test, shape tapper, rapid fire trivia, falling word catch, target tap.
+Pick ONE game at random — you MUST use the seed below to choose. Different seeds MUST produce different games. Options: reaction timer, whack-a-mole grid, tap speed test, color match quiz, math blitz, emoji memory pairs, number sort race, pattern repeat, odd one out, reflex test, shape tapper, falling word catch, target tap.
 
 EXACT STRUCTURE REQUIRED:
 1. A start screen: title + 1-2 lines explaining HOW TO PLAY (e.g. "Tap the emoji before they disappear!") + big START button
