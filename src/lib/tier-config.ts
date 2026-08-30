@@ -76,26 +76,46 @@ STYLE: dark background, vibrant colors, smooth animations.`,
   },
   {
     tier: 3,
-    model: "sonnet" as const,
-    modelId: "claude-sonnet-4-6",
-    maxTokens: 3000,
-    prompt: `Create a polished mobile browser game. Single HTML file, canvas-based, touch-only (NO keyboard).
+    model: "haiku" as const,
+    modelId: "claude-haiku-4-5-20251001",
+    maxTokens: 6000,
+    prompt: `You are an expert game developer. Create an IMPRESSIVE, POLISHED mobile browser game.
 
-Pick ONE at random using the seed below. Different seeds = different games. Options: tower defense, wave shooter, platformer, match-3, space combat, maze runner, breakout variant, asteroid dodge, card battler, arena brawler.
+Pick ONE game at random — you MUST use the seed below to choose, and different seeds MUST produce completely different games. Options: tower defense, survival wave shooter, platformer, match-3 gem crusher, space combat, maze runner with enemies, breakout with power-ups, asteroid dodge, card battler, arena brawler, roguelike dungeon, bullet hell, racing dodge, gravity flipper, rhythm tap.
 
-RULES:
-- Output ONLY <!DOCTYPE html>. No markdown, no backticks.
+OUTPUT FORMAT:
+- Output ONLY complete HTML starting with <!DOCTYPE html>. No markdown, no backticks.
+- Single file: ALL CSS in <style>, ALL JS in <script>
 - <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-- <title> with game name
-- Canvas: var canvas=document.getElementById('c'); var ctx=canvas.getContext('2d');
-- canvas.width=window.innerWidth; canvas.height=window.innerHeight; resize on window resize
-- requestAnimationFrame game loop
-- Touch: canvas.addEventListener('touchstart',fn,{passive:false}); e.preventDefault(); var rect=canvas.getBoundingClientRect(); var x=e.touches[0].clientX-rect.left;
-- On-screen controls: virtual joystick or tap-to-act, 60px+ touch targets
-- States: menu (title + brief HOW TO PLAY instructions + START button) → playing → game over (score + PLAY AGAIN)
-- Multiple enemy types, progressive difficulty, power-ups
-- HUD at top center (score, health). Dark background, vibrant colors, glow effects.
+- Creative <title> tag
+
+MOBILE CONTROLS — CRITICAL:
+- PHONE ONLY. NO keyboard, NO arrow keys, NO WASD, NO mouse hover.
+- Buttons (START, PLAY AGAIN): addEventListener('click'), min 200px wide, 60px tall
+- Touch-based game controls with visible on-screen UI:
+  * For movement: virtual joystick OR drag-to-move via touchmove — draw visible controls on canvas
+  * For actions: tap on canvas to shoot/interact
+  * touchstart/touchmove/touchend with {passive:false} + e.preventDefault()
+- Get touch coords: var rect=canvas.getBoundingClientRect(); var x=e.touches[0].clientX-rect.left; var y=e.touches[0].clientY-rect.top;
+
+RENDERING:
+- Canvas API: var canvas=document.getElementById('c'); var ctx=canvas.getContext('2d');
+- canvas.width=window.innerWidth; canvas.height=window.innerHeight; — update on resize
+- requestAnimationFrame 60fps game loop
+- All objects within canvas bounds
+- HUD at TOP CENTER (score, health, level) — away from thumb controls
+- Particle effects, glow effects (ctx.shadowBlur), vibrant palette on dark background
+
+GAME FLOW:
+- Start screen: game title + 1-2 lines HOW TO PLAY (e.g. "Drag to move, tap to shoot") + big START button
+- Gameplay with score tracking
+- Game over screen: final score + PLAY AGAIN button
+- Clear all intervals/timeouts on game over
+- Multiple enemy types with different behaviors
+- Progressive difficulty (enemies get faster/more numerous)
+- Power-ups that drop from defeated enemies
 - Whenever score changes: if(window._reportScore) window._reportScore(score);
-- CRITICAL: Keep code VERY CONCISE. Use short variable names (1-2 chars). No comments. Minify where possible. This MUST be under 3000 tokens total.`,
+
+Make it IMPRESSIVE — this is the premium tier. Smooth animations, satisfying feedback.`,
   },
 ];
