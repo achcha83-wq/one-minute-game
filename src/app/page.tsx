@@ -146,23 +146,26 @@ export default function Page() {
         setLoadMsg(msgs[ni]);
       }
 
-      if (s >= target) {
-        if (buffered.current) {
-          clearInterval(timerRef.current!);
-          timerRef.current = null;
-          setGameHtml(buffered.current.html);
-          setGameName(buffered.current.name);
-          setGameId(buffered.current.id);
-          setElapsed(target);
-          setState("ready");
-        } else {
-          clearInterval(timerRef.current!);
-          timerRef.current = null;
-          if (abortRef.current) abortRef.current.abort();
-          setElapsed(target);
-          setErrMsg("AI couldn't finish in time — try again or pick a longer tier");
-          setState("error");
-        }
+      if (s >= target && buffered.current) {
+        clearInterval(timerRef.current!);
+        timerRef.current = null;
+        setGameHtml(buffered.current.html);
+        setGameName(buffered.current.name);
+        setGameId(buffered.current.id);
+        setElapsed(target);
+        setState("ready");
+      } else if (s >= target && !buffered.current) {
+        setLoadMsg("Almost there...");
+      }
+
+      const hardLimit = Math.max(target * 2, 60);
+      if (s >= hardLimit && !buffered.current) {
+        clearInterval(timerRef.current!);
+        timerRef.current = null;
+        if (abortRef.current) abortRef.current.abort();
+        setElapsed(s);
+        setErrMsg("AI couldn't finish in time — try again or pick a longer tier");
+        setState("error");
       }
     }, 250);
 
@@ -299,11 +302,11 @@ export default function Page() {
             </p>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, overflow: "visible" }}>
             {TIERS.map((t, i) => {
               const tierGames = recentGames.filter((g) => g.tier === i + 1);
               return (
-                <div key={i}>
+                <div key={i} style={{ overflow: "visible" }}>
                   <button onClick={() => generate(i)} style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     padding: "20px 22px", background: "#151530", border: "1px solid #2a2a4a",
@@ -473,7 +476,7 @@ export default function Page() {
   );
 }
 
-const THUMB_SIZE = 140;
+const THUMB_SIZE = 72;
 const IFRAME_SIZE = 375;
 const SCALE = THUMB_SIZE / IFRAME_SIZE;
 
@@ -492,11 +495,14 @@ function GameThumbnailRow({ games, color }: { games: SavedGame[]; color: string 
   }, [games]);
 
   const scroll = () => {
-    scrollRef.current?.scrollBy({ left: THUMB_SIZE + 8, behavior: "smooth" });
+    scrollRef.current?.scrollBy({ left: THUMB_SIZE * 2 + 12, behavior: "smooth" });
   };
 
   return (
-    <div style={{ position: "relative", marginTop: 10, marginBottom: 6 }}>
+    <div style={{
+      position: "relative", marginTop: 10, marginBottom: 6,
+      width: "80vw", maxWidth: 600, marginLeft: "auto", marginRight: "auto",
+    }}>
       <div
         ref={scrollRef}
         className="thumb-scroll"
@@ -505,11 +511,11 @@ function GameThumbnailRow({ games, color }: { games: SavedGame[]; color: string 
           gridTemplateRows: `repeat(2, ${THUMB_SIZE}px)`,
           gridAutoFlow: "column",
           gridAutoColumns: `${THUMB_SIZE}px`,
-          gap: 8,
+          gap: 6,
           overflowX: "auto",
           overflowY: "hidden",
           scrollbarWidth: "none",
-          paddingRight: canScroll ? 32 : 0,
+          paddingRight: canScroll ? 28 : 0,
         }}
       >
         {games.map((g) => (
@@ -520,7 +526,7 @@ function GameThumbnailRow({ games, color }: { games: SavedGame[]; color: string 
               display: "block",
               width: THUMB_SIZE,
               height: THUMB_SIZE,
-              borderRadius: 12,
+              borderRadius: 8,
               overflow: "hidden",
               border: `1px solid ${color}44`,
               background: "#000",
@@ -544,12 +550,13 @@ function GameThumbnailRow({ games, color }: { games: SavedGame[]; color: string 
             />
             <div style={{
               position: "absolute", bottom: 0, left: 0, right: 0,
-              background: "linear-gradient(transparent, rgba(0,0,0,0.85))",
-              padding: "16px 8px 6px",
+              background: "linear-gradient(transparent, rgba(0,0,0,0.9))",
+              padding: "10px 4px 3px",
             }}>
               <div style={{
-                fontSize: 10, color: "#ddd", fontWeight: 600,
+                fontSize: 7, color: "#ccc", fontWeight: 600,
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                textAlign: "center",
               }}>{g.name}</div>
             </div>
           </a>
@@ -560,10 +567,10 @@ function GameThumbnailRow({ games, color }: { games: SavedGame[]; color: string 
         <button
           onClick={scroll}
           style={{
-            position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)",
-            width: 30, height: 30, borderRadius: "50%",
+            position: "absolute", right: -4, top: "50%", transform: "translateY(-50%)",
+            width: 24, height: 24, borderRadius: "50%",
             background: "rgba(11,11,26,0.95)", border: `1px solid ${color}88`,
-            color, fontSize: 15, cursor: "pointer",
+            color, fontSize: 12, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
             zIndex: 2,
           }}
